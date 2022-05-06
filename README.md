@@ -33,42 +33,42 @@ Follow a guide like [fsr-pad-guide](https://github.com/Sereni/fsr-pad-guide) or 
 
 ## Firmware setup
 1. Install [Arduino IDE](https://www.arduino.cc/en/software) (skip this if you're using OSX as it's included in Teensyduino)
-1. Install [Arduino Joystick Library] (https://github.com/MHeironimus/ArduinoJoystickLibrary) if using an Arduino Leonardo or related clones.
-1. Install [Teensyduino](https://www.pjrc.com/teensy/td_download.html) and get it connected to your Teensy and able to push firmware via Arduino IDE
+2. Install [Arduino Joystick Library] (https://github.com/MHeironimus/ArduinoJoystickLibrary) if using an Arduino Leonardo or related clones.
+3. Install [Teensyduino](https://www.pjrc.com/teensy/td_download.html) and get it connected to your Teensy and able to push firmware via Arduino IDE
 
 (The next three steps are for Teensy)
-1. In Arduino IDE, set the `Tools` > `USB Type` to `Serial + Keyboard + Mouse + Joystick` (or `Serial + Keyboard + Mouse`)
-1. In Arduino IDE, set the `Tools` > `Board` to your microcontroller (e.g. `Teensy 4.0`)
-1. In Arduino IDE, set the `Tools` > `Port` to select the serial port for the plugged in microcontroller (e.g. `COM5` or `/dev/something`)
+4. In Arduino IDE, set the `Tools` > `USB Type` to `Serial + Keyboard + Mouse + Joystick` (or `Serial + Keyboard + Mouse`)
+5. In Arduino IDE, set the `Tools` > `Board` to your microcontroller (e.g. `Teensy 4.0`)
+6. In Arduino IDE, set the `Tools` > `Port` to select the serial port for the plugged in microcontroller (e.g. `COM5` or `/dev/something`)
 
-1. Load [fsr.ino](./fsr.ino) in Arduino IDE.
-1. By default, A0-A7 are the pins used for the FSR sensors in this software, corresponding to 8 buttons on a DDR softpad. To add or remove more, [alter the Sensor array](./fsr.ino#L491-L500) and [number of buttons you will need](./fsr.ino#L41)
-1. Refer to [the](./fsr.ino#L331) [following lines](./fsr.ino#L606-607) and [the ResponsiveAnalogRead library] (https://github.com/dxinteractive/ResponsiveAnalogRead) to adjust the smoothing of the analog readings.
-1. Regarding [the Sensor array](./fsr.ino#L491-L500), if PSX functionality is not desired, set the second values to PS_INPUT::PS_NONE.
-1. Push the code to the board
-1. For attaching a PSX cable, refer to [veroxzik's PSX Library] (https://github.com/veroxzik/arduino-psx-controller). Note that if powering via the 7.6v Rumble line, you will need to use a Schottky diode (side with line leading to Arduino VIN pin, other side to PSX cable).
+7. Load [fsr.ino](./fsr.ino) in Arduino IDE.
+8. By default, A0-A7 are the pins used for the FSR sensors in this software, corresponding to 8 buttons on a DDR softpad. To add or remove more, [alter the Sensor array](./fsr/fsr.ino#L491-L500) and [number of buttons you will need](./fsr.ino#L41)
+9. Refer to [the](./fsr.ino#L331) [following lines](./fsr/fsr.ino#L606-607) and [the ResponsiveAnalogRead library] (https://github.com/dxinteractive/ResponsiveAnalogRead) to adjust the smoothing of the analog readings.
+10. Regarding [the Sensor array](./fsr/fsr.ino#L491-L500), if PSX functionality is not desired, set the second values to PS_INPUT::PS_NONE.
+11. Push the code to the board
+12. For attaching a PSX cable, refer to [veroxzik's PSX Library] (https://github.com/veroxzik/arduino-psx-controller). Note that if powering via the 7.6v Rumble line, you will need to use a Schottky diode (side with line leading to Arduino VIN pin, other side to PSX cable).
 
 ### Testing and using the serial monitor
 1. Open `Tools` > `Serial Monitor` to open the Serial Monitor
-1. Within the serial monitor, enter `t` to show current thresholds.
-1. You can change a sensor threshold by entering numbers, where the first number is the sensor (0-indexed) followed by the threshold value. For example, `3 180` would set the 4th sensor to a threshold of 180.  You can change these more easily in the UI later.
-1. Enter `v` to get the current sensor values.
-1. Putting pressure on an FSR, you should notice the values change if you enter `v` again while maintaining pressure.
+2. Within the serial monitor, enter `t` to show current thresholds.
+3. You can change a sensor threshold by entering numbers, where the first number is the sensor (0-indexed) followed by the threshold value. For example, `3 180` would set the 4th sensor to a threshold of 180.  You can change these more easily in the UI later.
+4. Enter `v` to get the current sensor values.
+5. Putting pressure on an FSR, you should notice the values change if you enter `v` again while maintaining pressure.
 
 
 ## UI setup
 1. Install [Python](https://www.python.org/downloads/). On Linux you can install Python with your distribution's package manager. On some systems you might have to additionally install the python3 header files (usually called `python3-dev` or similar).
-1. Install [Node](https://nodejs.org/en/download/)
+2. Install [Node](https://nodejs.org/en/download/)
     - Install [yarn](https://classic.yarnpkg.com/en/docs/install#windows-stable). A quick way to do this is with NPM: `npm install -g yarn`
-1. Within [server.py](./webui/server/server.py), edit the `SERIAL_PORT` constant to match the serial port shown in the Arduino IDE (e.g. it might look like `"/dev/ttyACM0"` or `"COM1"`)
+3. Within [server.py](./webui/server/server.py), edit the `SERIAL_PORT` constant to match the serial port shown in the Arduino IDE (e.g. it might look like `"/dev/ttyACM0"` or `"COM1"`)
     - You also may need to [modify](https://github.com/teejusb/fsr/pull/1#discussion_r514585060) the `sensor_numbers` variable for the number of panels used.
-1. Edit [this line in App.js](./webui/src/App.js#L25) according to number of sensors in panel. Note that you will need to run 'npm run build' within the webui folder for every change done (webserver can be kept running, just refresh page after building changes).
-1. Open a command prompt (or terminal) and navigate to `./webui/server` with `cd webui/server`
-1. Run `python -m venv venv` (you may need to replace `python` with `py` on Windows or potentially `python3` on Linux)
-1. Run `venv\Scripts\activate` (on Linux you run `source venv/bin/activate`)
-1. Run `pip install -r requirements.txt` to install dependencies (might need to use `pip3` instead of `pip` on Linux)
-1. Then move to the `./webui` directory by doing `cd ..`
-1. Run `yarn install && yarn build && yarn start-api`
+4. Edit [this line in App.js](./webui/src/App.js#L25) according to number of sensors in panel. Note that you will need to run 'npm run build' within the webui folder for every change done (webserver can be kept running, just refresh page after building changes).
+5. Open a command prompt (or terminal) and navigate to `./webui/server` with `cd webui/server`
+6. Run `python -m venv venv` (you may need to replace `python` with `py` on Windows or potentially `python3` on Linux)
+7. Run `venv\Scripts\activate` (on Linux you run `source venv/bin/activate`)
+8. Run `pip install -r requirements.txt` to install dependencies (might need to use `pip3` instead of `pip` on Linux)
+9. Then move to the `./webui` directory by doing `cd ..`
+10. Run `yarn install && yarn build && yarn start-api`
     - On Linux, you'll also need to edit the `start-api` script in `./webui/package.json` to reference `venv/bin/python` instead of `venv/Scripts/python`
 
 The UI should be up and running on http://localhost:5000 and you can use your device IP and the port to reach it from your phone (e.g. http://192.168.0.xxx:5000 )
