@@ -1,4 +1,6 @@
 #include <inttypes.h>
+#include <arduino_psx.h>
+#include "ResponsiveAnalogRead.h"
 
 #if !defined(__AVR_ATmega32U4__) && !defined(__AVR_ATmega328P__) && \
     !defined(__AVR_ATmega1280__) && !defined(__AVR_ATmega2560__)
@@ -20,39 +22,68 @@
     #endif
     Joystick.useManualSend(true);
   }
-  void ButtonPress(uint8_t button_num) {
+  void ButtonPress(uint8_t button_num, uint8_t psxInput) {
     Joystick.button(button_num, 1);
+    PSX.setButton(psxInput, true);
   }
   void ButtonRelease(uint8_t button_num) {
     Joystick.button(button_num, 0);
+    PSX.setButton(psxInput, false);
   }
 #else
-  #include <Keyboard.h>
-  // And the Keyboard library for Arduino
+  // Add the Joystick library for Arduino
+  #include <Joystick.h>
+
+  // current configuration is for a Pro Micro board. Add and/or omit as per your board's specs
+  Joystick_ Joystick (
+      0x03,
+      JOYSTICK_TYPE_JOYSTICK,
+      10, /* number of buttons usable, limit will be defined by number of usable analog and digital pins*/
+      0,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+  );
+  
   void ButtonStart() {
-    Keyboard.begin();
+    Joystick.begin();
   }
-  void ButtonPress(uint8_t button_num) {
-    Keyboard.press('a' + button_num - 1);
+  void ButtonPress(uint8_t button_num, unsigned int psxInput) {
+    Joystick.setButton(button_num, 1);
+    PSX.setButton(psxInput, true);
   }
-  void ButtonRelease(uint8_t button_num) {
-    Keyboard.release('a' + button_num - 1);
+  void ButtonRelease(uint8_t button_num, unsigned int psxInput) {
+    Joystick.setButton(button_num, 0);
+    PSX.setButton(psxInput, false);
   }
 #endif
 
 // Default threshold value for each of the sensors.
-const int16_t kDefaultThreshold = 1000;
+const int16_t kDefaultThreshold = 500;
 // Max window size for both of the moving averages classes.
 const size_t kWindowSize = 50;
 // Baud rate used for Serial communication. Technically ignored by Teensys.
-const long kBaudRate = 115200;
+const long kBaudRate = 9600;
 // Max number of sensors per panel.
 // NOTE(teejusb): This is arbitrary, if you need to support more sensors
 // per panel then just change the following number.
 const size_t kMaxSharedSensors = 2;
-// Button numbers should start with 1 (Button0 is not a valid Joystick input).
+// Button numbers should start with 1 (Button0 is not a valid Joystick input
+// unless using the Arduino Joystick Library).
 // Automatically incremented when creating a new SensorState.
-uint8_t curButtonNum = 1;
+#ifdef CORE_TEENSY
+  uint8_t curButtonNum = 1;
+#else
+  uint8_t curButtonNum = 0;
+#endif
 
 /*===========================================================================*/
 
@@ -161,7 +192,7 @@ class SensorState {
         #if defined(ENABLE_LIGHTS)
         kLightsPin(curLightPin++),
         #endif
-        buttonNum(curButtonNum++) {
+        kButtonNum(curButtonNum++) {
     for (size_t i = 0; i < kMaxSharedSensors; ++i) {
       sensor_ids_[i] = 0;
       individual_states_[i] = SensorState::OFF;
@@ -169,14 +200,6 @@ class SensorState {
     #if defined(ENABLE_LIGHTS)
       pinMode(kLightsPin, OUTPUT);
     #endif
-  }
-
-  void Init() {
-    if (initialized_) {
-      return;
-    }
-    buttonNum = curButtonNum++;
-    initialized_ = true;
   }
 
   // Adds a new sensor to share this state with. If we try adding a sensor that
@@ -190,10 +213,8 @@ class SensorState {
   // Evaluates a single sensor as part of the shared state.
   void EvaluateSensor(uint8_t sensor_id,
                       int16_t cur_value,
-                      int16_t user_threshold) {
-    if (!initialized_) {
-      return;
-    }
+                      int16_t user_threshold,
+                      unsigned int psxInput) {
     size_t sensor_index = GetIndexForSensor(sensor_id);
 
     // The sensor we're evaluating is not part of this shared state.
@@ -229,7 +250,7 @@ class SensorState {
               }
             }
             if (turn_on) {
-              ButtonPress(buttonNum);
+              ButtonPress(kButtonNum, psxInput);
               combined_state_ = SensorState::ON;
               #if defined(ENABLE_LIGHTS)
                 digitalWrite(kLightsPin, HIGH);
@@ -248,7 +269,7 @@ class SensorState {
               }
             }
             if (turn_off) {
-              ButtonRelease(buttonNum);
+              ButtonRelease(kButtonNum, psxInput);
               combined_state_ = SensorState::OFF;
               #if defined(ENABLE_LIGHTS)
                 digitalWrite(kLightsPin, LOW);
@@ -272,9 +293,6 @@ class SensorState {
   }
 
  private:
-  // Ensures that Init() has been called at exactly once on this SensorState.
-  bool initialized_;
-
   // The collection of sensors shared with this state.
   uint8_t sensor_ids_[kMaxSharedSensors];
   // The number of sensors this state combines with.
@@ -299,8 +317,7 @@ class SensorState {
   #endif
 
   // The button number this state corresponds to.
-  // Set once in Init().
-  uint8_t buttonNum;
+  const uint8_t kButtonNum;
 };
 
 /*===========================================================================*/
@@ -308,8 +325,10 @@ class SensorState {
 // Class containing all relevant information per sensor.
 class Sensor {
  public:
-  Sensor(uint8_t pin_value, SensorState* sensor_state = nullptr)
+  Sensor(uint8_t pin_value, unsigned int psxInput, SensorState* sensor_state = nullptr)
       : initialized_(false), pin_value_(pin_value),
+        psxInput_(psxInput),
+        analogReader(pin_value_, true, 0.0004),
         user_threshold_(kDefaultThreshold),
         #if defined(CAN_AVERAGE)
           moving_average_(kWindowSize),
@@ -340,11 +359,6 @@ class Sensor {
       should_delete_state_ = true;
     }
 
-    // Initialize the sensor state.
-    // This sets the button number corresponding to the sensor state.
-    // Trying to re-initialize a sensor_state_ is a no-op, so no harm in 
-    sensor_state_->Init();
-
     // If this sensor hasn't been added to the state, then try adding it.
     if (sensor_state_->GetIndexForSensor(sensor_id) == SIZE_MAX) {
       sensor_state_->AddSensor(sensor_id);
@@ -363,7 +377,7 @@ class Sensor {
       return;
     }
 
-    int16_t sensor_value = analogRead(pin_value_);
+    int16_t sensor_value = analogReader.getValue();//analogRead(pin_value_);
 
     #if defined(CAN_AVERAGE)
       // Fetch the updated Weighted Moving Average.
@@ -379,8 +393,9 @@ class Sensor {
     #endif
 
     if (willSend) {
+      updateAnalogReader();
       sensor_state_->EvaluateSensor(
-        sensor_id_, cur_value_, user_threshold_);
+        sensor_id_, cur_value_, user_threshold_, psxInput_);
     }
   }
 
@@ -406,12 +421,27 @@ class Sensor {
 
   // Delete default constructor. Pin number MUST be explicitly specified.
   Sensor() = delete;
+
+  unsigned int getPSXValue(){
+    return psxInput_;
+  }
+
+  ResponsiveAnalogRead getReader() {
+      return analogReader;
+  }
+
+  void updateAnalogReader() {
+      analogReader.update();
+  }
  
  private:
   // Ensures that Init() has been called at exactly once on this Sensor.
   bool initialized_;
   // The pin on the Teensy/Arduino corresponding to this sensor.
   uint8_t pin_value_;
+
+  // PSX input value
+  unsigned int psxInput_;
 
   // The user defined threshold value to activate/deactivate this sensor at.
   int16_t user_threshold_;
@@ -435,6 +465,8 @@ class Sensor {
 
   // A unique number corresponding to this sensor. Set during Init().
   uint8_t sensor_id_;
+
+  ResponsiveAnalogRead analogReader;
 };
 
 /*===========================================================================*/
@@ -457,10 +489,14 @@ class Sensor {
 // };
 
 Sensor kSensors[] = {
-  Sensor(A0),
-  Sensor(A1),
-  Sensor(A2),
-  Sensor(A3),
+  Sensor(A0, PS_INPUT::PS_LEFT),
+  Sensor(A1, PS_INPUT::PS_DOWN),
+  Sensor(A2, PS_INPUT::PS_UP),
+  Sensor(A3, PS_INPUT::PS_RIGHT),
+  Sensor(A4, PS_INPUT::PS_CROSS),
+  Sensor(A5, PS_INPUT::PS_CIRCLE),
+  Sensor(A6, PS_INPUT::PS_SELECT),
+  Sensor(A7, PS_INPUT::PS_START)
 };
 const size_t kNumSensors = sizeof(kSensors)/sizeof(Sensor);
 
@@ -468,8 +504,10 @@ const size_t kNumSensors = sizeof(kSensors)/sizeof(Sensor);
 
 class SerialProcessor {
  public:
-   void Init(long baud_rate) {
+   void Init(long baud_rate, long ack_pin) {
     Serial.begin(baud_rate);
+    // Setup PSX with digital pin input as ACK pin
+    PSX.init(ack_pin);
   }
 
   void CheckAndMaybeProcessData() {
@@ -560,20 +598,22 @@ unsigned long lastSend = 0;
 long loopTime = -1;
 
 void setup() {
-  serialProcessor.Init(kBaudRate);
+  serialProcessor.Init(kBaudRate, 5);
   ButtonStart();
   for (size_t i = 0; i < kNumSensors; ++i) {
     // Button numbers should start with 1.
     kSensors[i].Init(i + 1);
+    kSensors[i].getReader().setActivityThreshold(100.0);
+    kSensors[i].getReader().enableEdgeSnap();
   }
   
   #if defined(CLEAR_BIT) && defined(SET_BIT)
-	  // Set the ADC prescaler to 16 for boards that support it,
-	  // which is a good balance between speed and accuracy.
-	  // More information can be found here: http://www.gammon.com.au/adc
-	  SET_BIT(ADCSRA, ADPS2);
-	  CLEAR_BIT(ADCSRA, ADPS1);
-	  CLEAR_BIT(ADCSRA, ADPS0);
+    // Set the ADC prescaler to 16 for boards that support it,
+    // which is a good balance between speed and accuracy.
+    // More information can be found here: http://www.gammon.com.au/adc
+    SET_BIT(ADCSRA, ADPS2);
+    CLEAR_BIT(ADCSRA, ADPS1);
+    CLEAR_BIT(ADCSRA, ADPS0);
   #endif
 }
 
@@ -604,4 +644,7 @@ void loop() {
   if (loopTime == -1) {
     loopTime = micros() - startMicros;
   }
+
+  // Send PSX control data to SPI
+  PSX.send();
 }

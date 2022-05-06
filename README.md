@@ -1,3 +1,10 @@
+# Fork details
+This fork has the following modifications done to it:
+- Fetching analog values using [ResponsiveAnalogRead library] (https://github.com/dxinteractive/ResponsiveAnalogRead) for less noisy reads
+- Joystick inputs for Arduino instead of keyboard using [Arduino Joystick Library] (https://github.com/MHeironimus/ArduinoJoystickLibrary)
+- PSX functionaly added using [veroxzik's PSX Library] (https://github.com/veroxzik/arduino-psx-controller)
+- Modified React WebUI to support more panels
+
 # Teejusb's FSR Guide
 A complete software package for FSR dance pads.  
 Join the [discord](https://discord.gg/RamvtwuEF2) for any questions/suggestions
@@ -26,13 +33,20 @@ Follow a guide like [fsr-pad-guide](https://github.com/Sereni/fsr-pad-guide) or 
 
 ## Firmware setup
 1. Install [Arduino IDE](https://www.arduino.cc/en/software) (skip this if you're using OSX as it's included in Teensyduino)
+1. Install [Arduino Joystick Library] (https://github.com/MHeironimus/ArduinoJoystickLibrary) if using an Arduino Leonardo or related clones.
 1. Install [Teensyduino](https://www.pjrc.com/teensy/td_download.html) and get it connected to your Teensy and able to push firmware via Arduino IDE
+
+(The next three steps are for Teensy)
 1. In Arduino IDE, set the `Tools` > `USB Type` to `Serial + Keyboard + Mouse + Joystick` (or `Serial + Keyboard + Mouse`)
 1. In Arduino IDE, set the `Tools` > `Board` to your microcontroller (e.g. `Teensy 4.0`)
 1. In Arduino IDE, set the `Tools` > `Port` to select the serial port for the plugged in microcontroller (e.g. `COM5` or `/dev/something`)
+
 1. Load [fsr.ino](./fsr.ino) in Arduino IDE.
-1. By default, [A0-A3 are the pins](https://forum.pjrc.com/teensy40_pinout1.png) used for the FSR sensors in this software. If you aren't using these pins [alter the SensorState array](./fsr.ino#L437-L442)
+1. By default, A0-A7 are the pins used for the FSR sensors in this software, corresponding to 8 buttons on a DDR softpad. To add or remove more, [alter the Sensor array](./fsr.ino#L491-L500) and [number of buttons you will need](./fsr.ino#L41)
+1. Refer to [the](./fsr.ino#L331) [following lines](./fsr.ino#L606-607) and [the ResponsiveAnalogRead library] (https://github.com/dxinteractive/ResponsiveAnalogRead) to adjust the smoothing of the analog readings.
+1. Regarding [the Sensor array](./fsr.ino#L491-L500), if PSX functionality is not desired, set the second values to PS_INPUT::PS_NONE.
 1. Push the code to the board
+1. For attaching a PSX cable, refer to [veroxzik's PSX Library] (https://github.com/veroxzik/arduino-psx-controller). Note that if powering via the 7.6v Rumble line, you will need to use a Schottky diode (side with line leading to Arduino VIN pin, other side to PSX cable).
 
 ### Testing and using the serial monitor
 1. Open `Tools` > `Serial Monitor` to open the Serial Monitor
@@ -47,7 +61,8 @@ Follow a guide like [fsr-pad-guide](https://github.com/Sereni/fsr-pad-guide) or 
 1. Install [Node](https://nodejs.org/en/download/)
     - Install [yarn](https://classic.yarnpkg.com/en/docs/install#windows-stable). A quick way to do this is with NPM: `npm install -g yarn`
 1. Within [server.py](./webui/server/server.py), edit the `SERIAL_PORT` constant to match the serial port shown in the Arduino IDE (e.g. it might look like `"/dev/ttyACM0"` or `"COM1"`)
-    - You also may need to [modify](https://github.com/teejusb/fsr/pull/1#discussion_r514585060) the `sensor_numbers` variable.
+    - You also may need to [modify](https://github.com/teejusb/fsr/pull/1#discussion_r514585060) the `sensor_numbers` variable for the number of panels used.
+1. Edit [this line in App.js](./webui/src/App.js#L25) according to number of sensors in panel. Note that you will need to run 'npm run build' within the webui folder for every change done (webserver can be kept running, just refresh page after building changes).
 1. Open a command prompt (or terminal) and navigate to `./webui/server` with `cd webui/server`
 1. Run `python -m venv venv` (you may need to replace `python` with `py` on Windows or potentially `python3` on Linux)
 1. Run `venv\Scripts\activate` (on Linux you run `source venv/bin/activate`)
