@@ -1,8 +1,8 @@
 # Fork details
 This fork has the following modifications done to it:
-- Fetching analog values using [ResponsiveAnalogRead library] (https://github.com/dxinteractive/ResponsiveAnalogRead) for less noisy reads
-- Joystick inputs for Arduino instead of keyboard using [Arduino Joystick Library] (https://github.com/MHeironimus/ArduinoJoystickLibrary)
-- PSX functionaly added using [veroxzik's PSX Library] (https://github.com/veroxzik/arduino-psx-controller)
+- Fetching analog values using [ResponsiveAnalogRead library](https://github.com/dxinteractive/ResponsiveAnalogRead) for less noisy reads
+- Joystick inputs for Arduino instead of keyboard using [Arduino Joystick Library](https://github.com/MHeironimus/ArduinoJoystickLibrary)
+- PSX functionaly added using [veroxzik's PSX Library](https://github.com/veroxzik/arduino-psx-controller)
 - Modified React WebUI to support more panels
 
 # Teejusb's FSR Guide
@@ -33,7 +33,7 @@ Follow a guide like [fsr-pad-guide](https://github.com/Sereni/fsr-pad-guide) or 
 
 ## Firmware setup
 1. Install [Arduino IDE](https://www.arduino.cc/en/software) (skip this if you're using OSX as it's included in Teensyduino)
-2. Install [Arduino Joystick Library] (https://github.com/MHeironimus/ArduinoJoystickLibrary) if using an Arduino Leonardo or related clones.
+2. Install [Arduino Joystick Library](https://github.com/MHeironimus/ArduinoJoystickLibrary) if using an Arduino Leonardo or related clones.
 3. Install [Teensyduino](https://www.pjrc.com/teensy/td_download.html) and get it connected to your Teensy and able to push firmware via Arduino IDE
 
 (The next three steps are for Teensy)
@@ -43,10 +43,10 @@ Follow a guide like [fsr-pad-guide](https://github.com/Sereni/fsr-pad-guide) or 
 
 7. Load [fsr.ino](./fsr.ino) in Arduino IDE.
 8. By default, A0-A7 are the pins used for the FSR sensors in this software, corresponding to 8 buttons on a DDR softpad. To add or remove more, [alter the Sensor array](./fsr/fsr.ino#L491-L500) and [number of buttons you will need](./fsr.ino#L41)
-9. Refer to [the](./fsr.ino#L331) [following lines](./fsr/fsr.ino#L606-607) and [the ResponsiveAnalogRead library] (https://github.com/dxinteractive/ResponsiveAnalogRead) to adjust the smoothing of the analog readings.
+9. Refer to [the](./fsr.ino#L331) [following lines](./fsr/fsr.ino#L606-607) and [the ResponsiveAnalogRead library](https://github.com/dxinteractive/ResponsiveAnalogRead) to adjust the smoothing of the analog readings.
 10. Regarding [the Sensor array](./fsr/fsr.ino#L491-L500), if PSX functionality is not desired, set the second values to PS_INPUT::PS_NONE.
 11. Push the code to the board
-12. For attaching a PSX cable, refer to [veroxzik's PSX Library] (https://github.com/veroxzik/arduino-psx-controller). Note that if powering via the 7.6v Rumble line, you will need to use a Schottky diode (side with line leading to Arduino VIN pin, other side to PSX cable).
+12. For attaching a PSX cable, refer to [veroxzik's PSX Library](https://github.com/veroxzik/arduino-psx-controller). Note that if powering via the 7.6v Rumble line, you will need to use a Schottky diode (side with line leading to Arduino VIN pin, other side to PSX cable).
 
 ### Testing and using the serial monitor
 1. Open `Tools` > `Serial Monitor` to open the Serial Monitor
